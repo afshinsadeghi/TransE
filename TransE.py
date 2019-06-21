@@ -83,7 +83,6 @@ class TransEModel(nn.Module):
         self.out_draw_negative_ = np.zeros(1000)
 
         self.batch_counter = 0
-        #self.batch = self.sampler.get_splitted_set_training_batchs(self.config.x_train_bach_size)
 
     def make_splitted_batch(self):
         self.batch = self.sampler.get_splitted_set_training_batchs(self.config.x_train_bach_size)
@@ -95,31 +94,22 @@ class TransEModel(nn.Module):
 
     def get_variables(self):
         self.x_train = Variable(self.sampler.get_random_training_samples(self.config.x_train_bach_size))
-        # print x_train[0]
-        # print x_train.shape
         self.x_train_negative = Variable(torch.tensor(
             self.sampler.get_negative_samples(self.x_train[:, 0], self.x_train[:, 1], self.x_train[:, 2])))
-        # print x_train_negative.shape
-        # clear grads as discussed in prev post
-        # inputs_pos = Variable(h,r,t)
-        # inputs_negative = Variable(h_negative,t_negative,r_negative)
-
+        
     def loss_func(self, p_score, n_score):
         criterion = nn.MarginRankingLoss(self.config.margin, False)  # .cuda()
         y = Variable(torch.Tensor([-1]))  # .cuda()
         loss = criterion(p_score, n_score, y)
-        # lambda_var + score - score_negative, min_var
         return loss
 
     def forward(self):
         if self.config.batch_type == "random_batch":
             self.get_variables()
         elif self.config.batch_type == "pre_splitted_batch":
-            #print self.batch_number
             if self.batch_counter == 0:
                 self.sampler.reshuffle()
                 self.make_splitted_batch()
-                #print self.x_train[:, 0]
             self.batch_counter = self.batch_counter + 1
             self.get_splitted_variables()
 
@@ -129,11 +119,6 @@ class TransEModel(nn.Module):
         h_negative = self.embeddings.get_vectorised_values_entity(self.x_train_negative[:, 0])
         t_negative = self.embeddings.get_vectorised_values_entity(self.x_train_negative[:, 1])
         r_negative = self.embeddings.get_vectorised_values_relation(self.x_train_negative[:, 2])
-        # x = F.relu(self.linear(x))
-        #print "h"
-        #print h.shape
-        #print "r"
-        #print r.shape  # X  dimension is [Nx, m]or  [Nx, training_example_number]  where Nx is feature numbers in x and m is the sample number
         if self.config.L1_Norm:
             score_pos = torch.norm((h + r - t), p=1, dim=1)
             score_neg = torch.norm((h_negative + r_negative - t_negative), p=1, dim=1)
@@ -212,8 +197,6 @@ class Experiment(object):
         self.hit_hundred_head = 0
 
     def train(self):
-
-        # y_correct = np.zeros(50)
         lambda_ = torch.FloatTensor(np.random.uniform(-1 / 5, 1 / 5, [self.config.x_train_bach_size]))
         zero_vector = torch.FloatTensor(np.random.uniform(-000000.1, 000000.1, [self.config.x_train_bach_size]))
         min_var = Variable(zero_vector)
@@ -228,7 +211,6 @@ class Experiment(object):
 
             for batch_counter in range(0, self.config.number_of_batch):
                 optimizer = torch.optim.SGD(self.model.parameters(), lr=self.config.learning_rate)
-                #optimizer = torch.optim.Adagrad(self.model.parameters(),lr=self.config.learning_rate)
                 optimizer.zero_grad()
                 loss =self.model()
                 loss.backward()  # back props
@@ -240,7 +222,7 @@ class Experiment(object):
             print('epoch {}, loss_per_triple {}'.format(epoch, loss_per_triple))
             if epoch > 0 and epoch % 50 == 0:
                 self.save(epoch)
-                #self.test()
+                self.test()
         print ("training finished with epochs, learning rate, dataset" + str(self.config.epochs) + " "+ str(self.config.learning_rate) + " "+ str(self.config.x_feature_dimension)+ " "+self.dataset_setting.dataset)
 
     def save(self, epoch):
@@ -280,8 +262,6 @@ class Experiment(object):
                 score_test_tail = np.sort(score_test_tail, None)
                 hit_head = np.amin(np.where(score_test_head == score_test)[0])
                 hit_tail = np.amin(np.where(score_test_tail == score_test)[0])
-                #print hit_head
-                #print hit_tail
                 if hit_tail < 101:
                     self.hit_hundred_tail = self.hit_hundred_tail + 1
                 if hit_head < 101:
@@ -386,7 +366,7 @@ def load_model_():
     return
 
 
-#run_experiment()
+run_experiment()
 #load_model_test_experiment()
 #load_model_
 
